@@ -64,16 +64,16 @@ const insertFormula = () => {
 // 初始化 UEditor
 const initUEditor = () => {
   // 设置 UEditor 资源路径 - 添加 base 路径前缀
-  window.UEDITOR_HOME_URL = '/edtior-demo/UEditor/'
+  window.UEDITOR_HOME_URL = '/editor-demo/UEditor/'
 
   // 加载 UEditor 配置文件
-  loadScript('/edtior-demo/UEditor/ueditor.config.js', () => {
+  loadScript('/editor-demo/UEditor/ueditor.config.js', () => {
     // 加载 UEditor 主文件
-    loadScript('/edtior-demo/UEditor/ueditor.all.min.js', () => {
+    loadScript('/editor-demo/UEditor/ueditor.all.min.js', () => {
       // 加载 KityFormula 插件的所有必需文件
-      loadScript('/edtior-demo/UEditor/kityformula-plugin/addKityFormulaDialog.js', () => {
-        loadScript('/edtior-demo/UEditor/kityformula-plugin/getKfContent.js', () => {
-          loadScript('/edtior-demo/UEditor/kityformula-plugin/defaultFilterFix.js', () => {
+      loadScript('/editor-demo/UEditor/kityformula-plugin/addKityFormulaDialog.js', () => {
+        loadScript('/editor-demo/UEditor/kityformula-plugin/getKfContent.js', () => {
+          loadScript('/editor-demo/UEditor/kityformula-plugin/defaultFilterFix.js', () => {
             // 创建编辑器实例
             editorInstance = window.UE.getEditor('ueditor-container', {
               // 编辑器宽高
@@ -118,11 +118,11 @@ const initUEditor = () => {
               imageMaxSize: 2048000,
               // 编辑区域背景色
               iframeUrlMap: {
-                'link': '/edtior-demo/UEditor/dialogs/link/link.html',
-                'insertimage': '/edtior-demo/UEditor/dialogs/image/image.html',
-                'insertvideo': '/edtior-demo/UEditor/dialogs/video/video.html',
-                'attachment': '/edtior-demo/UEditor/dialogs/attachment/attachment.html',
-                'emotion': '/edtior-demo/UEditor/dialogs/emotion/emotion.html'
+                'link': '/editor-demo/UEditor/dialogs/link/link.html',
+                'insertimage': '/editor-demo/UEditor/dialogs/image/image.html',
+                'insertvideo': '/editor-demo/UEditor/dialogs/video/video.html',
+                'attachment': '/editor-demo/UEditor/dialogs/attachment/attachment.html',
+                'emotion': '/editor-demo/UEditor/dialogs/emotion/emotion.html'
               }
             })
 

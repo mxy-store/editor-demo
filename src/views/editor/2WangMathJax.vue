@@ -208,7 +208,7 @@
                 placeholder="输入 LaTeX 公式，例如：&#10;数学公式: E = mc^2&#10;化学公式: \ce{H2O}&#10;&#10;提示：化学公式需要使用 \ce{} 包裹" />
               <div class="preview-area" v-if="customFormula">
                 <h4>实时预览：</h4>
-                <div class="preview-content" v-html="previewCustomFormula"></div>
+                <div ref="customPreviewRef" class="preview-content" v-html="previewCustomFormula"></div>
               </div>
               <div class="formula-tips">
                 <p><strong>数学公式示例：</strong></p>
@@ -269,6 +269,7 @@ const editorRef = shallowRef()
 const valueHtml = ref('<p>欢迎使用 WangEditor + MathJax + mhchem 富文本编辑器！</p><p>点击上方按钮插入数学公式或化学公式。</p>')
 const previewContent = ref('')
 const previewRef = ref<HTMLElement>()
+const customPreviewRef = ref<HTMLElement>()
 const mode = ref('default')
 
 // 公式对话框
@@ -603,9 +604,10 @@ watch(customFormula, (newVal) => {
   if (newVal) {
     previewCustomFormula.value = `<div class="formula-preview">$$${newVal}$$</div>`
     nextTick(() => {
-      if (window.MathJax && window.MathJax.typesetPromise) {
-        window.MathJax.typesetClear()
-        window.MathJax.typesetPromise().catch((err: Error) => {
+      if (window.MathJax && window.MathJax.typesetPromise && customPreviewRef.value) {
+        const elements = [customPreviewRef.value]
+        window.MathJax.typesetClear(elements)
+        window.MathJax.typesetPromise(elements).catch((err: Error) => {
           console.error('预览渲染失败:', err)
         })
       }
@@ -624,7 +626,10 @@ const getContent = () => {
   const html = (editor as any).getHtml()
   previewContent.value = html
 
-  renderMathJax()
+  // 等待 DOM 更新后再渲染 MathJax
+  nextTick(() => {
+    renderMathJax()
+  })
 
   ElMessage.success('内容已获取，请查看预览区域')
 }

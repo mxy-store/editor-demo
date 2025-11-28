@@ -39,6 +39,11 @@ const router = createRouter({
       name: 'mathquill',
       component: () => import('../views/editor/6MathQuillView.vue'),
     },
+    {
+      path: '/sw',
+      name: 'sw',
+      component: () => import('../views/swView.vue'),
+    },
     // {
     //   path: '/home',
     //   name: 'home',

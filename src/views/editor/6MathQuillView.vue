@@ -99,7 +99,7 @@
     <div class="preview">
       <h3>内容预览：</h3>
       <el-card>
-        <div v-html="previewContent"></div>
+        <div ref="contentPreviewRef" v-html="previewContent"></div>
       </el-card>
     </div>
   </div>
@@ -112,6 +112,8 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { Boot } from '@wangeditor/editor'
 import formulaModule from '@wangeditor/plugin-formula'
 import { ElMessage } from 'element-plus'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import '@wangeditor/editor/dist/css/style.css'
 
 // 注册公式插件
@@ -133,6 +135,7 @@ declare global {
 const editorRef = shallowRef()
 const valueHtml = ref('<p>欢迎使用富文本编辑器！点击上方按钮插入 MathQuill 公式。</p>')
 const previewContent = ref('')
+const contentPreviewRef = ref<HTMLElement>()
 const mode = ref('default')
 
 // MathQuill 相关
@@ -328,9 +331,41 @@ const handleCreated = (editor: unknown) => {
   ElMessage.success('编辑器加载完成')
 }
 
+// 渲染预览区域的公式
+const renderPreviewFormulas = () => {
+  if (!contentPreviewRef.value) return
+
+  nextTick(() => {
+    try {
+      // 找到所有公式元素
+      const formulas = contentPreviewRef.value!.querySelectorAll('span[data-w-e-type="formula"]')
+
+      formulas.forEach((span: Element) => {
+        const value = span.getAttribute('data-value')
+        if (!value) return
+
+        try {
+          // 使用 KaTeX 渲染公式
+          katex.render(value, span as HTMLElement, {
+            throwOnError: false,
+            displayMode: !span.hasAttribute('data-w-e-is-inline')
+          })
+        } catch (err) {
+          console.error('公式渲染错误:', err, '公式:', value)
+          // 如果渲染失败，至少显示原始公式
+          span.textContent = value
+        }
+      })
+    } catch (error) {
+      console.error('公式渲染过程出错:', error)
+    }
+  })
+}
+
 // 获取内容
 const getContent = () => {
   previewContent.value = valueHtml.value
+  renderPreviewFormulas()
   ElMessage.success('内容已更新到预览区域')
   console.log('编辑器内容：', valueHtml.value)
 }
@@ -345,6 +380,7 @@ const setContent = () => {
   `
   valueHtml.value = sampleContent
   previewContent.value = sampleContent
+  renderPreviewFormulas()
   ElMessage.success('已设置示例内容')
 }
 

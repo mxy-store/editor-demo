@@ -21,3 +21,7 @@ npm run build
 ```sh
 npm run lint
 ```
+
+```预览地址
+ https://mxy-store.github.io/editor-demo/
+```
