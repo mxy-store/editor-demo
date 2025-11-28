@@ -1,266 +1,278 @@
 <template>
   <div class="ueditor-container">
-    <div class="header">
-      <h2>富文本编辑器 (wangeditor + KaTeX)</h2>
-      <div class="actions">
-        <el-button type="primary" @click="getContent">获取内容</el-button>
-        <el-button @click="setContent">设置内容</el-button>
-        <el-button @click="clearContent">清空</el-button>
-        <el-button @click="getHtml">获取 HTML</el-button>
-        <el-button type="success" @click="openFormulaDialog">
-          <span style="font-size: 16px; font-weight: bold;">f(x)</span> 插入公式
-        </el-button>
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>正在初始化 KaTeX 编辑器...</p>
       </div>
     </div>
 
-    <div class="editor-wrapper">
-      <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-      <Editor style="height: 300px; overflow-y: hidden;" v-model="valueHtml" :defaultConfig="editorConfig" :mode="mode"
-        @onCreated="handleCreated" />
-    </div>
-    <!-- 自定义公式选择对话框 -->
-    <el-dialog v-model="formulaDialogVisible" :title="isSimpleMode ? '插入公式' : '编辑公式'" width="900px"
-      :close-on-click-modal="false">
-      <div class="formula-dialog">
-        <!-- 简单模式：仅显示自定义输入 -->
-        <div v-if="isSimpleMode">
-          <el-input v-model="customFormula" type="textarea" :rows="4" placeholder="输入 LaTeX 格式的公式，例如：E=mc^2" />
-          <div class="formula-preview" v-if="customFormula">
-            <h4>预览：</h4>
-            <div ref="customPreviewRef" class="preview-content"></div>
-          </div>
+    <!-- 主内容 -->
+    <div v-else class="main-content">
+      <div class="header">
+        <h2>富文本编辑器 (wangeditor + KaTeX)</h2>
+        <div class="actions">
+          <el-button type="primary" @click="getContent">获取内容</el-button>
+          <el-button @click="setContent">设置内容</el-button>
+          <el-button @click="clearContent">清空</el-button>
+          <el-button @click="getHtml">获取 HTML</el-button>
+          <el-button type="success" @click="openFormulaDialog">
+            <span style="font-size: 16px; font-weight: bold;">f(x)</span> 插入公式
+          </el-button>
         </div>
+      </div>
 
-        <!-- 完整模式：显示分类选择和自定义输入 -->
-        <el-tabs v-else v-model="activeFormulaTab" type="card">
-          <!-- 数学公式 -->
-          <el-tab-pane label="数学公式" name="math">
-            <div class="formula-category">
-              <h4>基础运算</h4>
-              <div class="formula-list">
-                <el-button v-for="item in mathFormulas.basic" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>希腊字母</h4>
-              <div class="formula-list">
-                <el-button v-for="item in mathFormulas.greek" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>上下标与根式</h4>
-              <div class="formula-list">
-                <el-button v-for="item in mathFormulas.scripts" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>积分微分</h4>
-              <div class="formula-list">
-                <el-button v-for="item in mathFormulas.calculus" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>矩阵与向量</h4>
-              <div class="formula-list">
-                <el-button v-for="item in mathFormulas.matrix" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-          </el-tab-pane>
-
-          <!-- 化学公式 -->
-          <el-tab-pane label="化学公式" name="chemistry">
-            <div class="formula-category">
-              <h4>常见分子</h4>
-              <div class="formula-list">
-                <el-button v-for="item in chemistryFormulas.molecules" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>化学反应</h4>
-              <div class="formula-list">
-                <el-button v-for="item in chemistryFormulas.reactions" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>离子与电荷</h4>
-              <div class="formula-list">
-                <el-button v-for="item in chemistryFormulas.ions" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>化学符号</h4>
-              <div class="formula-list">
-                <el-button v-for="item in chemistryFormulas.symbols" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-          </el-tab-pane>
-
-          <!-- 物理公式 -->
-          <el-tab-pane label="物理公式" name="physics">
-            <div class="formula-category">
-              <h4>经典力学</h4>
-              <div class="formula-list">
-                <el-button v-for="item in physicsFormulas.mechanics" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>电磁学</h4>
-              <div class="formula-list">
-                <el-button v-for="item in physicsFormulas.electromagnetism" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>热力学</h4>
-              <div class="formula-list">
-                <el-button v-for="item in physicsFormulas.thermodynamics" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-          </el-tab-pane>
-
-          <!-- 医学公式 -->
-          <el-tab-pane label="医学公式" name="medical">
-            <div class="formula-category">
-              <h4>体格测量</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.bmi" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>药物剂量</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.dosage" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>心血管</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.cardiovascular" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>肾脏功能</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.renal" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>呼吸系统</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.respiratory" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>实验室检查</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.laboratory" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>儿科</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.pediatric" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-            <div class="formula-category">
-              <h4>临床评分</h4>
-              <div class="formula-list">
-                <el-button v-for="item in medicalFormulas.clinical" :key="item.latex" size="small"
-                  @click="insertFormulaTemplate(item.latex)">
-                  {{ item.name }}
-                </el-button>
-              </div>
-            </div>
-          </el-tab-pane>
-
-          <!-- 自定义输入 -->
-          <el-tab-pane label="自定义输入" name="custom">
+      <div class="editor-wrapper">
+        <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig"
+          :mode="mode" />
+        <Editor style="height: 300px; overflow-y: hidden;" v-model="valueHtml" :defaultConfig="editorConfig"
+          :mode="mode" @onCreated="handleCreated" />
+      </div>
+      <!-- 自定义公式选择对话框 -->
+      <el-dialog v-model="formulaDialogVisible" :title="isSimpleMode ? '插入公式' : '编辑公式'" width="900px"
+        :close-on-click-modal="false">
+        <div class="formula-dialog">
+          <!-- 简单模式：仅显示自定义输入 -->
+          <div v-if="isSimpleMode">
             <el-input v-model="customFormula" type="textarea" :rows="4" placeholder="输入 LaTeX 格式的公式，例如：E=mc^2" />
-            <div class="preview-controls">
-              <el-button type="primary" :disabled="!customFormula" @click="togglePreview">
-                {{ showCustomPreview ? '隐藏预览' : '显示预览' }}
-              </el-button>
-            </div>
-            <div class="formula-preview" v-if="showCustomPreview && customFormula">
-              <h4>预览效果：</h4>
+            <div class="formula-preview" v-if="customFormula">
+              <h4>预览：</h4>
               <div ref="customPreviewRef" class="preview-content"></div>
             </div>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-      <template #footer>
-        <el-button @click="formulaDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmInsertFormula">确定插入</el-button>
-      </template>
-    </el-dialog>
+          </div>
 
-    <div class="preview">
-      <h3>内容预览：</h3>
-      <el-card>
-        <div v-html="previewContent"></div>
-      </el-card>
-    </div>
+          <!-- 完整模式：显示分类选择和自定义输入 -->
+          <el-tabs v-else v-model="activeFormulaTab" type="card">
+            <!-- 数学公式 -->
+            <el-tab-pane label="数学公式" name="math">
+              <div class="formula-category">
+                <h4>基础运算</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in mathFormulas.basic" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>希腊字母</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in mathFormulas.greek" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>上下标与根式</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in mathFormulas.scripts" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>积分微分</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in mathFormulas.calculus" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>矩阵与向量</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in mathFormulas.matrix" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <!-- 化学公式 -->
+            <el-tab-pane label="化学公式" name="chemistry">
+              <div class="formula-category">
+                <h4>常见分子</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in chemistryFormulas.molecules" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>化学反应</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in chemistryFormulas.reactions" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>离子与电荷</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in chemistryFormulas.ions" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>化学符号</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in chemistryFormulas.symbols" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <!-- 物理公式 -->
+            <el-tab-pane label="物理公式" name="physics">
+              <div class="formula-category">
+                <h4>经典力学</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in physicsFormulas.mechanics" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>电磁学</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in physicsFormulas.electromagnetism" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>热力学</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in physicsFormulas.thermodynamics" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <!-- 医学公式 -->
+            <el-tab-pane label="医学公式" name="medical">
+              <div class="formula-category">
+                <h4>体格测量</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.bmi" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>药物剂量</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.dosage" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>心血管</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.cardiovascular" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>肾脏功能</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.renal" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>呼吸系统</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.respiratory" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>实验室检查</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.laboratory" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>儿科</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.pediatric" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+              <div class="formula-category">
+                <h4>临床评分</h4>
+                <div class="formula-list">
+                  <el-button v-for="item in medicalFormulas.clinical" :key="item.latex" size="small"
+                    @click="insertFormulaTemplate(item.latex)">
+                    {{ item.name }}
+                  </el-button>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <!-- 自定义输入 -->
+            <el-tab-pane label="自定义输入" name="custom">
+              <el-input v-model="customFormula" type="textarea" :rows="4" placeholder="输入 LaTeX 格式的公式，例如：E=mc^2" />
+              <div class="preview-controls">
+                <el-button type="primary" :disabled="!customFormula" @click="togglePreview">
+                  {{ showCustomPreview ? '隐藏预览' : '显示预览' }}
+                </el-button>
+              </div>
+              <div class="formula-preview" v-if="showCustomPreview && customFormula">
+                <h4>预览效果：</h4>
+                <div ref="customPreviewRef" class="preview-content"></div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+        <template #footer>
+          <el-button @click="formulaDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmInsertFormula">确定插入</el-button>
+        </template>
+      </el-dialog>
+
+      <div class="preview">
+        <h3>内容预览：</h3>
+        <el-card>
+          <div v-html="previewContent"></div>
+        </el-card>
+      </div>
+    </div> <!-- 关闭 main-content -->
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, shallowRef, onBeforeUnmount, onMounted, nextTick, watch } from 'vue'
 // @ts-expect-error - wangeditor vue wrapper does not have type definitions
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { Boot } from '@wangeditor/editor'
@@ -272,6 +284,9 @@ import 'katex/dist/katex.min.css'
 
 // 注册公式插件
 Boot.registerModule(formulaModule)
+
+// 加载状态
+const isLoading = ref(true)
 
 // 编辑器实例
 const editorRef = shallowRef()
@@ -621,7 +636,18 @@ const handleCreated = (editor: unknown) => {
   editorRef.value = editor
   console.log('编辑器已创建', editor)
   ElMessage.success('编辑器加载完成')
+  isLoading.value = false  // 编辑器创建完成后关闭加载状态
 }
+
+// 组件挂载时设置加载状态
+onMounted(() => {
+  // 延迟一小段时间，确保编辑器完全初始化
+  setTimeout(() => {
+    if (isLoading.value && !editorRef.value) {
+      isLoading.value = false
+    }
+  }, 3000)  // 3秒超时保护
+})
 
 // 组件销毁时，销毁编辑器
 onBeforeUnmount(() => {
@@ -717,6 +743,49 @@ const clearContent = () => {
 </script>
 
 <style lang="scss" scoped>
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 20px;
+    border: 3px solid #e4e7ed;
+    border-top: 3px solid #409eff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin: 0;
+    color: #606266;
+    font-size: 16px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .ueditor-container {
   width: 100%;
   min-height: 100vh;

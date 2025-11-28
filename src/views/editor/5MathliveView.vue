@@ -1,116 +1,128 @@
 <template>
   <div class="mathlive-container">
-    <div class="header">
-      <h2>富文本编辑器 (WangEditor + MathLive)</h2>
-      <p class="subtitle">集成 MathLive 的专业数学公式编辑能力</p>
-      <div class="actions">
-        <el-button type="primary" @click="getContent">获取内容</el-button>
-        <el-button @click="setContent">设置示例</el-button>
-        <el-button @click="clearContent">清空</el-button>
-        <el-button type="success" @click="openFormulaDialog">
-          <span style="font-size: 16px; font-weight: bold;">∫</span> 插入公式
-        </el-button>
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>正在初始化 MathLive 编辑器...</p>
       </div>
     </div>
 
-    <div class="editor-wrapper">
-      <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-      <Editor style="height: 300px; overflow-y: hidden" v-model="valueHtml" :defaultConfig="editorConfig" :mode="mode"
-        @onCreated="handleCreated" />
-    </div>
+    <!-- 主内容 -->
+    <div v-else class="main-content">
+      <div class="header">
+        <h2>富文本编辑器 (WangEditor + MathLive)</h2>
+        <p class="subtitle">集成 MathLive 的专业数学公式编辑能力</p>
+        <div class="actions">
+          <el-button type="primary" @click="getContent">获取内容</el-button>
+          <el-button @click="setContent">设置示例</el-button>
+          <el-button @click="clearContent">清空</el-button>
+          <el-button type="success" @click="openFormulaDialog">
+            <span style="font-size: 16px; font-weight: bold;">∫</span> 插入公式
+          </el-button>
+        </div>
+      </div>
 
-    <!-- MathLive 公式对话框 -->
-    <el-dialog v-model="formulaDialogVisible" title="插入数学公式 (MathLive)" width="1000px" :close-on-click-modal="false"
-      :append-to-body="true" :modal-append-to-body="false" :z-index="3000">
-      <div class="mathlive-dialog">
-        <el-row :gutter="20">
-          <el-col :span="14">
-            <div class="editor-section">
-              <h4>公式编辑器：</h4>
-              <div ref="mathfieldRef" class="mathfield-wrapper"></div>
-              <div class="editor-tips">
-                <p><strong>快捷键：</strong></p>
-                <ul>
-                  <li><code>^</code> 上标 | <code>_</code> 下标 | <code>/</code> 分数</li>
-                  <li><code>sqrt</code> 根号 | <code>int</code> 积分 | <code>sum</code> 求和</li>
-                </ul>
+      <div class="editor-wrapper">
+        <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig"
+          :mode="mode" />
+        <Editor style="height: 300px; overflow-y: hidden" v-model="valueHtml" :defaultConfig="editorConfig" :mode="mode"
+          @onCreated="handleCreated" />
+      </div>
+
+      <!-- MathLive 公式对话框 -->
+      <el-dialog v-model="formulaDialogVisible" title="插入数学公式 (MathLive)" width="1000px" :close-on-click-modal="false"
+        :append-to-body="true" :modal-append-to-body="false" :z-index="3000">
+        <div class="mathlive-dialog">
+          <el-row :gutter="20">
+            <el-col :span="14">
+              <div class="editor-section">
+                <h4>公式编辑器：</h4>
+                <div ref="mathfieldRef" class="mathfield-wrapper"></div>
+                <div class="editor-tips">
+                  <p><strong>快捷键：</strong></p>
+                  <ul>
+                    <li><code>^</code> 上标 | <code>_</code> 下标 | <code>/</code> 分数</li>
+                    <li><code>sqrt</code> 根号 | <code>int</code> 积分 | <code>sum</code> 求和</li>
+                  </ul>
+                </div>
               </div>
-            </div>
 
-            <el-tabs v-model="activeTemplateTab" type="card" class="template-tabs">
-              <el-tab-pane label="数学" name="math">
-                <div class="template-section">
-                  <el-button v-for="item in mathTemplates.basic" :key="item.latex" size="small"
-                    @click="setFormula(item.latex)">
-                    {{ item.name }}
-                  </el-button>
-                </div>
-              </el-tab-pane>
+              <el-tabs v-model="activeTemplateTab" type="card" class="template-tabs">
+                <el-tab-pane label="数学" name="math">
+                  <div class="template-section">
+                    <el-button v-for="item in mathTemplates.basic" :key="item.latex" size="small"
+                      @click="setFormula(item.latex)">
+                      {{ item.name }}
+                    </el-button>
+                  </div>
+                </el-tab-pane>
 
-              <el-tab-pane label="物理" name="physics">
-                <div class="template-section">
-                  <el-button v-for="item in physicsTemplates.mechanics" :key="item.latex" size="small"
-                    @click="setFormula(item.latex)">
-                    {{ item.name }}
-                  </el-button>
-                </div>
-              </el-tab-pane>
+                <el-tab-pane label="物理" name="physics">
+                  <div class="template-section">
+                    <el-button v-for="item in physicsTemplates.mechanics" :key="item.latex" size="small"
+                      @click="setFormula(item.latex)">
+                      {{ item.name }}
+                    </el-button>
+                  </div>
+                </el-tab-pane>
 
-              <el-tab-pane label="化学" name="chemistry">
-                <div class="template-section">
-                  <el-button v-for="item in chemistryTemplates.molecules" :key="item.latex" size="small"
-                    @click="setFormula(item.latex)">
-                    {{ item.name }}
-                  </el-button>
-                </div>
-              </el-tab-pane>
+                <el-tab-pane label="化学" name="chemistry">
+                  <div class="template-section">
+                    <el-button v-for="item in chemistryTemplates.molecules" :key="item.latex" size="small"
+                      @click="setFormula(item.latex)">
+                      {{ item.name }}
+                    </el-button>
+                  </div>
+                </el-tab-pane>
 
-              <el-tab-pane label="医学" name="medical">
-                <div class="template-section">
-                  <h5>基础指标</h5>
-                  <el-button v-for="item in medicalTemplates.bmi" :key="item.latex" size="small"
-                    @click="setFormula(item.latex)">
-                    {{ item.name }}
-                  </el-button>
-                </div>
-                <div class="template-section">
-                  <h5>呼吸系统</h5>
-                  <el-button v-for="item in medicalTemplates.respiratory" :key="item.latex" size="small"
-                    @click="setFormula(item.latex)">
-                    {{ item.name }}
-                  </el-button>
-                </div>
-              </el-tab-pane>
-            </el-tabs>
-          </el-col>
+                <el-tab-pane label="医学" name="medical">
+                  <div class="template-section">
+                    <h5>基础指标</h5>
+                    <el-button v-for="item in medicalTemplates.bmi" :key="item.latex" size="small"
+                      @click="setFormula(item.latex)">
+                      {{ item.name }}
+                    </el-button>
+                  </div>
+                  <div class="template-section">
+                    <h5>呼吸系统</h5>
+                    <el-button v-for="item in medicalTemplates.respiratory" :key="item.latex" size="small"
+                      @click="setFormula(item.latex)">
+                      {{ item.name }}
+                    </el-button>
+                  </div>
+                </el-tab-pane>
+              </el-tabs>
+            </el-col>
 
-          <el-col :span="10">
-            <div class="output-section">
-              <h4>LaTeX 代码：</h4>
-              <el-input v-model="latexOutput" type="textarea" :rows="4" readonly />
+            <el-col :span="10">
+              <div class="output-section">
+                <h4>LaTeX 代码：</h4>
+                <el-input v-model="latexOutput" type="textarea" :rows="4" readonly />
 
-              <h4 style="margin-top: 16px">渲染预览：</h4>
-              <div class="render-preview" v-html="renderedFormula"></div>
+                <h4 style="margin-top: 16px">渲染预览：</h4>
+                <div class="render-preview" v-html="renderedFormula"></div>
 
-              <h4 style="margin-top: 16px">ASCII Math：</h4>
-              <el-input v-model="asciiMathOutput" type="textarea" :rows="3" readonly />
-            </div>
-          </el-col>
-        </el-row>
+                <h4 style="margin-top: 16px">ASCII Math：</h4>
+                <el-input v-model="asciiMathOutput" type="textarea" :rows="3" readonly />
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <template #footer>
+          <el-button @click="formulaDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmInsertFormula">确定插入</el-button>
+        </template>
+      </el-dialog>
+
+      <div class="preview">
+        <h3>内容预览：</h3>
+        <el-card>
+          <div ref="previewRef" v-html="previewContent"></div>
+        </el-card>
       </div>
-
-      <template #footer>
-        <el-button @click="formulaDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmInsertFormula">确定插入</el-button>
-      </template>
-    </el-dialog>
-
-    <div class="preview">
-      <h3>内容预览：</h3>
-      <el-card>
-        <div ref="previewRef" v-html="previewContent"></div>
-      </el-card>
-    </div>
+    </div> <!-- 关闭 main-content -->
   </div>
 </template>
 
@@ -128,6 +140,9 @@ import '@wangeditor/editor/dist/css/style.css'
 
 // 注册公式插件
 Boot.registerModule(formulaModule)
+
+// 加载状态
+const isLoading = ref(true)
 
 // 编辑器实例
 const editorRef = shallowRef()
@@ -300,6 +315,7 @@ const confirmInsertFormula = () => {
 const handleCreated = (editor: unknown) => {
   editorRef.value = editor
   ElMessage.success('编辑器加载完成')
+  isLoading.value = false  // 编辑器创建完成后关闭加载状态
 }
 
 // 渲染预览区域的公式
@@ -365,6 +381,12 @@ const clearContent = () => {
 // 组件挂载
 onMounted(() => {
   // MathLive 会在对话框打开时初始化
+  // 添加超时保护，确保加载状态不会无限显示
+  setTimeout(() => {
+    if (isLoading.value && !editorRef.value) {
+      isLoading.value = false
+    }
+  }, 3000)  // 3秒超时保护
 })
 
 // 组件销毁
@@ -382,6 +404,49 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 20px;
+    border: 3px solid #e4e7ed;
+    border-top: 3px solid #409eff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin: 0;
+    color: #606266;
+    font-size: 16px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .mathlive-container {
   width: 100%;
   min-height: 100vh;

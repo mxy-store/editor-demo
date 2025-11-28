@@ -1,43 +1,55 @@
 <template>
   <div class="mathjax-editor-container">
-    <div class="header">
-      <h2>富文本编辑器 (WangEditor + vue-mathjax-beautiful)</h2>
-      <div class="actions">
-        <el-button type="success" @click="openFormulaEditor">
-          <span style="font-size: 16px; font-weight: bold;">f(x)</span> 打开公式编辑器
-        </el-button>
-        <el-button type="primary" @click="getContent">获取内容</el-button>
-        <el-button @click="setContent">设置内容</el-button>
-        <el-button @click="clearContent">清空</el-button>
-        <el-button @click="getHtml">获取 HTML</el-button>
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>正在初始化 vue-mathjax-beautiful 编辑器...</p>
       </div>
     </div>
 
-    <div class="editor-wrapper">
-      <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-      <Editor style="height: 300px; overflow-y: hidden;" v-model="valueHtml" :defaultConfig="editorConfig" :mode="mode"
-        @onCreated="handleCreated" />
-    </div>
+    <!-- 主内容 -->
+    <div v-else class="main-content">
+      <div class="header">
+        <h2>富文本编辑器 (WangEditor + vue-mathjax-beautiful)</h2>
+        <div class="actions">
+          <el-button type="success" @click="openFormulaEditor">
+            <span style="font-size: 16px; font-weight: bold;">f(x)</span> 打开公式编辑器
+          </el-button>
+          <el-button type="primary" @click="getContent">获取内容</el-button>
+          <el-button @click="setContent">设置内容</el-button>
+          <el-button @click="clearContent">清空</el-button>
+          <el-button @click="getHtml">获取 HTML</el-button>
+        </div>
+      </div>
 
-    <!-- vue-mathjax-beautiful 公式编辑器 -->
-    <VueMathjaxBeautiful v-model="showDialog" :existing-latex="currentFormula" theme="light" :show-symbols="true"
-      :show-preview="true" :show-theme-toggle="true" :show-clear-button="true" :show-language-toggle="true"
-      :show-formula-examples="true" :readonly="false" :auto-focus="true" placeholder="输入 LaTeX 公式或点击下方符号..."
-      :max-length="2000" :rows="4" :enabled-categories="['basic', 'greek', 'advanced', 'matrices', 'calculus']"
-      @insert="handleFormulaInsert" @change="handleFormulaChange" @clear="handleFormulaClear"
-      @theme-change="handleThemeChange" />
+      <div class="editor-wrapper">
+        <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig"
+          :mode="mode" />
+        <Editor style="height: 300px; overflow-y: hidden;" v-model="valueHtml" :defaultConfig="editorConfig"
+          :mode="mode" @onCreated="handleCreated" />
+      </div>
 
-    <div class="preview">
-      <h3>内容预览：</h3>
-      <el-card>
-        <div v-html="previewContent"></div>
-      </el-card>
-    </div>
-  </div>
+      <!-- vue-mathjax-beautiful 公式编辑器 -->
+      <VueMathjaxBeautiful v-model="showDialog" :existing-latex="currentFormula" theme="light" :show-symbols="true"
+        :show-preview="true" :show-theme-toggle="true" :show-clear-button="true" :show-language-toggle="true"
+        :show-formula-examples="true" :readonly="false" :auto-focus="true" placeholder="输入 LaTeX 公式或点击下方符号..."
+        :max-length="2000" :rows="4" :enabled-categories="['basic', 'greek', 'advanced', 'matrices', 'calculus']"
+        @insert="handleFormulaInsert" @change="handleFormulaChange" @clear="handleFormulaClear"
+        @theme-change="handleThemeChange" />
+
+      <div class="preview">
+        <h3>内容预览：</h3>
+        <el-card>
+          <div v-html="previewContent"></div>
+        </el-card>
+      </div>
+    </div> <!-- 关闭 main-content -->
+  </div> <!-- 关闭 mathjax-editor-container -->
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef, onBeforeUnmount, nextTick } from 'vue'
+import { ref, shallowRef, onBeforeUnmount, onMounted, nextTick } from 'vue'
 // @ts-expect-error - wangeditor vue wrapper does not have type definitions
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { Boot } from '@wangeditor/editor'
@@ -51,6 +63,9 @@ import 'katex/dist/katex.min.css'
 
 // 注册公式插件
 Boot.registerModule(formulaModule)
+
+// 加载状态
+const isLoading = ref(true)
 
 // 编辑器实例
 const editorRef = shallowRef()
@@ -226,6 +241,7 @@ const handleCreated = (editor: unknown) => {
   editorRef.value = editor
   console.log('编辑器已创建', editor)
   ElMessage.success('编辑器加载完成')
+  isLoading.value = false  // 编辑器创建完成后关闭加载状态
 
   // 设置公式按钮监听器
   setupFormulaButtonListener()
@@ -293,9 +309,64 @@ const getHtml = () => {
   console.log('HTML:', html)
   alert('HTML 已输出到控制台')
 }
+
+// 组件挂载时设置超时保护
+onMounted(() => {
+  // 超时保护：如果10秒后编辑器仍未加载完成，则强制关闭加载状态
+  setTimeout(() => {
+    if (isLoading.value) {
+      isLoading.value = false
+      ElMessage.warning('编辑器加载超时，已强制显示界面')
+    }
+  }, 10000)
+})
 </script>
 
 <style scoped>
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 20px;
+    border: 3px solid #e4e7ed;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin: 0;
+    color: #606266;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .mathjax-editor-container {
   padding: 20px;
   max-width: 1400px;

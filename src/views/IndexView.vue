@@ -301,7 +301,9 @@
           富文本编辑器
         </h2>
         <div class="nav-cards">
-          <div v-for="route in editorRoutes" :key="route.path" class="nav-card" @click="navigateTo(route.path)">
+          <div v-for="route in editorRoutes" :key="route.path"
+            :class="['nav-card', { 'loading': navigatingTo === route.path, 'disabled': navigatingTo && navigatingTo !== route.path }]"
+            @click="navigateTo(route.path)">
             <div class="card-icon">{{ route.icon }}</div>
             <div class="card-content">
               <h3>{{ route.title }}</h3>
@@ -344,8 +346,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElLoading, ElMessage } from 'element-plus'
 
 interface RouteInfo {
   path: string
@@ -356,6 +359,7 @@ interface RouteInfo {
 }
 
 const router = useRouter()
+const navigatingTo = ref('')
 
 // 编辑器相关页面
 const editorRoutes: RouteInfo[] = [
@@ -403,31 +407,41 @@ const editorRoutes: RouteInfo[] = [
   },
 ]
 
-// // 其他功能页面
-// const otherRoutes: RouteInfo[] = [
-//   {
-//     path: '/home',
-//     title: 'antvX6组件-图谱',
-//     description: '',
-//     icon: '🏠',
-//     tags: ['antvX6', '图谱','demo']
-//   },
-//   {
-//     path: '/canvas',
-//     title: '模拟业务需求',
-//     description: '',
-//     icon: '🎯',
-//     tags: ['Canvas', '图形']
-//   }
-// ]
-
 // 总页面数
 //const totalRoutes = computed(() => editorRoutes.length + otherRoutes.length)
 const totalRoutes = computed(() => editorRoutes.length)
 
-// 导航跳转
-const navigateTo = (path: string) => {
-  router.push(path)
+// 导航跳转 - 增强版，带加载状态和重试机制
+const navigateTo = async (path: string) => {
+  if (navigatingTo.value) return // 防止重复点击
+
+  navigatingTo.value = path
+
+  // 显示加载状态
+  const loading = ElLoading.service({
+    lock: true,
+    text: '正在加载编辑器...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    // 添加延迟确保状态更新
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // 执行路由跳转
+    await router.push(path)
+
+    // 等待一段时间确保组件加载完成
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    ElMessage.success('页面加载完成')
+  } catch (error) {
+    console.error('导航失败:', error)
+    ElMessage.error('页面加载失败，请重试')
+  } finally {
+    loading.close()
+    navigatingTo.value = ''
+  }
 }
 </script>
 
@@ -622,6 +636,45 @@ const navigateTo = (path: string) => {
 
   to {
     opacity: 1;
+  }
+}
+
+/* 导航卡片状态样式 */
+.nav-card.loading {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.nav-card.loading .card-icon {
+  animation: spin 2s linear infinite;
+}
+
+.nav-card.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
